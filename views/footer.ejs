@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Footer Example</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css" />
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+  
+  
+
+  <!-- Footer -->
+  <footer class="bg-dark text-light pt-4 mt-auto shadow-sm">
+    <div class="container">
+      <div class="row">
+        <!-- Brand / About -->
+        <div class="col-md-4 mb-3">
+          <h5 class="fw-bold">🌐 MyWebsite</h5>
+          <p class="small">
+            Your trusted platform for listings, services, and more.  
+            Built with ❤️ using Node.js + EJS + Bootstrap.
+          </p>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="col-md-4 mb-3">
+          <h6 class="fw-bold">Quick Links</h6>
+          <ul class="list-unstyled">
+            <li><a href="/" class="text-light text-decoration-none">Home</a></li>
+            <li><a href="/allistinggg" class="text-light text-decoration-none">All Listings</a></li>
+            <li><a href="/listings/new" class="text-light text-decoration-none">Add New Listing</a></li>
+            <li><a href="#" class="text-light text-decoration-none">About</a></li>
+          </ul>
+        </div>
+
+        <!-- Contact -->
+        <div class="col-md-4 mb-3">
+          <h6 class="fw-bold">Contact</h6>
+          <p class="small mb-1">📍 New Delhi, India</p>
+          <p class="small mb-1">📧 support@mywebsite.com</p>
+          <p class="small">📞 +91 9876543210</p>
+        </div>
+      </div>
+      <hr class="border-light" />
+      <div class="text-center pb-3 small">
+        © <%= new Date().getFullYear() %> MyWebsite — All Rights Reserved.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
