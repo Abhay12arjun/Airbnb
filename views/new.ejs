@@ -11,7 +11,7 @@
           </div>
           <div class="card-body">
 
-            <form method="POST"   action="/listings"   novalidate class="needs-validation">
+            <form method="POST"   action="/listings" enctype="multipart/form-data"  novalidate class="needs-validation">
               
               <!-- Title -->
               <div class="mb-3">
@@ -28,7 +28,7 @@
     </div>
               </div>
 
-               <!-- Images-->
+               <!-- Images
                <div class="mb-3">
                 <label for="image" class="form-label">Image</label>
                 <input 
@@ -41,7 +41,24 @@
                   <div class="valid-feedback">
       Looks good!
     </div>
-              </div>
+              </div> -->
+              <!-- Multiple Image Upload -->
+<div class="mb-3">
+  <label for="images" class="form-label">Images</label>
+  <input 
+    type="file" 
+    class="form-control" 
+    id="images" 
+    name="listing[images]" 
+    accept="image/*"
+    multiple
+    required
+  >
+  <div class="valid-feedback">
+    Looks good!
+  </div>
+</div>
+
 
               <!-- Description -->
               <div class="mb-3">

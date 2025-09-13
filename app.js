@@ -12,6 +12,7 @@ import session from "express-session";
 import flash from "connect-flash"
 import passport from "passport";
 import LocalStrategy from "passport-local"
+import isLoggedIn from "./middleware/authmiddleware.js";
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -21,6 +22,8 @@ import listingSchema  from "./schema.js";
 import User from "./models/user.js"
 import bodyParser from "body-parser";
 import bcrypt from "bcryptjs"
+import isReviewAuthor from "./middleware/AuthorReview.js"
+import upload from "./middleware/upload.js";
 // Recreate __filename and __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +32,8 @@ const app = express();
 app.set('view engine', 'ejs');
 app.set('./views',"./views");
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
 
 app.use(express.urlencoded({ extended: true }));  //This is middleware to parse the incoming request body
 app.use(methodOverride('_method')); // This is middleware to override HTTP methods
@@ -117,7 +122,8 @@ app.get("/login", (req, res) => {
 
 // Signup Route
 app.post("/signup", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password,username } = req.body;
+
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
@@ -126,7 +132,7 @@ app.post("/signup", async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const newUser = new User({ email, password: hashedPassword });
+  const newUser = new User({ email, password: hashedPassword ,username});
   await newUser.save();
 
   res.send("✅ Signup successful! <a href='/login'>Login here</a>");
@@ -211,40 +217,72 @@ app.use((req,res,next)=>{
 
 app.get("/listings/:id",WrapAsync(async(req,res)=>{
   let {id}=req.params;
-  const listing=await Listing.findById(id).populate("reviews").populate("owner");
+  const listing=await Listing.findById(id).populate({path:"reviews",populate:{path:"author"},}).populate("owner");
   res.render("show.ejs",{listing});
 }))
 
 
 //create Routes.......
-app.post("/listings",WrapAsync(async(req,res,next)=>{
+// app.post("/listings",WrapAsync(async(req,res,next)=>{
   
-  let result=listingSchema.validate(req.body);
-  if(result.error){
-    let msg=result.error.details.map(el=>el.message).join(",");
-    throw new ExpressError(400,msg);
-  }
-  const newListing=new Listing(req.body.listing);
-  newListing.owner=req.user._id;
-  await newListing.save();
-  req.flash("success","New Listing Created......")
-  res.redirect("/allistinggg");
+//   let result=listingSchema.validate(req.body);
+//   if(result.error){
+//     let msg=result.error.details.map(el=>el.message).join(",");
+//     throw new ExpressError(400,msg);
+//   }
+//   const newListing=new Listing(req.body.listing);
+//   newListing.owner=req.user._id;
+//   await newListing.save();
+//   req.flash("success","New Listing Created......")
+//   res.redirect("/allistinggg");
   
-  // console.log(listing);
-}))
+//   // console.log(listing);
+// }))
+
+
+
+app.post(
+  "/listings",
+  upload.array("listing[images]", 5),   // accept up to 5 images
+  WrapAsync(async (req, res, next) => {
+    // ✅ Validate form data (excluding images, since they’re files)
+    let result = listingSchema.validate(req.body);
+    if (result.error) {
+      let msg = result.error.details.map((el) => el.message).join(",");
+      throw new ExpressError(400, msg);
+    }
+
+    // ✅ Create new listing
+    const newListing = new Listing(req.body.listing);
+    newListing.owner = req.user._id;
+
+    // ✅ Save uploaded image paths into listing
+    if (req.files && req.files.length > 0) {
+      newListing.images = req.files.map((file) => `/uploads/${file.filename}`);
+    }
+
+    await newListing.save();
+
+    req.flash("success", "New Listing Created 🚀");
+    res.redirect("/allistinggg");
+  })
+);
+
 
 
 
 //for reviews additions
-app.post("/listings/:id/reviews",WrapAsync(async(req,res,next)=>{
-  if(!req.isAuthenticated()){
+app.post("/listings/:id/reviews",isLoggedIn,WrapAsync(async(req,res,next)=>{
+  // if(!req.isAuthenticated()){
     
-    return res.redirect("/login");
-  }
+  //   return res.redirect("/login");
+  // }
   let {id}=req.params; 
   let listing=await Listing.findById(req.params.id);
+  
 
   let newreview=new Reviews(req.body.review);
+  newreview.author=req.user._id;
   listing.reviews.push(newreview);
   await newreview.save()
   await listing.save()
@@ -254,13 +292,14 @@ app.post("/listings/:id/reviews",WrapAsync(async(req,res,next)=>{
   // console.log(listing);
 }))
 
-app.get(("/listings/:id/edit"),WrapAsync(async(req,res)=>{
-  if(!req.isAuthenticated()){
+app.get(("/listings/:id/edit"),isLoggedIn,WrapAsync(async(req,res)=>{
+  // if(!req.isAuthenticated()){
     
-    return res.redirect("/login");
-  }
+  //   return res.redirect("/login");
+  // }
   let {id}=req.params;
   const listing= await Listing.findById(id);
+  
   // req.flash("edit","Your Documents is now editted......") 
   // req.flash("edit", "Listing updated successfully!");          
   res.render("edit.ejs",{listing});
@@ -269,18 +308,21 @@ app.get(("/listings/:id/edit"),WrapAsync(async(req,res)=>{
 
 
 
-app.put(("/listings/:id"),WrapAsync(async(req,res)=>{
+app.put(("/listings/:id"),isLoggedIn,WrapAsync(async(req,res)=>{
   let {id}=req.params;
+  let listing=await Listing.findById(id);
+  
+  
   const updatedListing=await Listing.findByIdAndUpdate(id, {...req.body.listing});  
   req.flash("edit", "Listing updated successfully!"); 
   res.redirect(`/listings/${id}`);
 }))
 //post deletion
-app.delete("/listings/:id",WrapAsync(async(req,res)=>{
-  if(!req.isAuthenticated()){
+app.delete("/listings/:id",isLoggedIn,WrapAsync(async(req,res)=>{
+  // if(!req.isAuthenticated()){
     
-    return res.redirect("/login");
-  }
+  //   return res.redirect("/login");
+  // }
   let {id}=req.params;
   const deletedListing=await Listing.findByIdAndDelete(id);
   req.flash("succes", "Listing deleted successfully!");
@@ -288,12 +330,15 @@ app.delete("/listings/:id",WrapAsync(async(req,res)=>{
   
   
 }))
- //reviews deletions........
- app.delete("/listings/:id/reviews/:reviewId",WrapAsync(async(req,res)=>{
-  if(!req.isAuthenticated()){
+
+
+
+
+
     
-    return res.redirect("/login");
-  }
+
+ //reviews deletions........
+ app.delete("/listings/:id/reviews/:reviewId",isLoggedIn,isReviewAuthor,WrapAsync(async(req,res)=>{
   let {id,reviewId}=req.params;
   await Listing.findByIdAndUpdate(id,{$pull:{reviews:reviewId}})
   await Reviews.findByIdAndDelete(reviewId);
@@ -310,6 +355,7 @@ app.use((err,req,res,next)=>{
 // app.all('/{*any}',(req,res,next)=>{
 //   next(new ExpressError(404,"Page Not Found"));
 // })
+
 
 
 app.listen(PORT,(req,res)=>{

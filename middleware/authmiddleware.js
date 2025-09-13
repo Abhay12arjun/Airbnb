@@ -1,0 +1,10 @@
+// authMiddleware.js
+function isLoggedIn(req, res, next) {
+  if (!req.isAuthenticated || !req.isAuthenticated()) {
+    req.flash("error", "You must be signed in first!");
+    return res.redirect("/login");
+  }
+  next();
+}
+
+export default isLoggedIn;
