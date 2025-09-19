@@ -23,11 +23,20 @@ import User from "./models/user.js"
 import bodyParser from "body-parser";
 import bcrypt from "bcryptjs"
 import isReviewAuthor from "./middleware/AuthorReview.js"
-import upload from "./middleware/upload.js";
+// import upload from "./middleware/upload.js";
 // Recreate __filename and __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
+import dotenv from "dotenv";
+dotenv.config();
+
+
+import multer from "multer";
+import { storage } from "./cloudinary.js";
+const upload = multer({storage})
+
+
 
 app.set('view engine', 'ejs');
 app.set('./views',"./views");
@@ -241,24 +250,53 @@ app.get("/listings/:id",WrapAsync(async(req,res)=>{
 
 
 
+// app.post(
+//   "/listings",
+//   upload.array("listing[images]", 5),   // accept up to 5 images
+//   WrapAsync(async (req, res, next) => {
+//     // ✅ Validate form data (excluding images, since they’re files)
+//     let result = listingSchema.validate(req.body);
+//     if (result.error) {
+//       let msg = result.error.details.map((el) => el.message).join(",");
+//       throw new ExpressError(400, msg);
+//     }
+
+//     // ✅ Create new listing
+//     const newListing = new Listing(req.body.listing);
+//     newListing.owner = req.user._id;
+
+//     // ✅ Save uploaded image paths into listing
+//     if (req.files && req.files.length > 0) {
+//       newListing.images = req.files.map((file) => `/uploads/${file.filename}`);
+//     }
+
+//     await newListing.save();
+
+//     req.flash("success", "New Listing Created 🚀");
+//     res.redirect("/allistinggg");
+//   })
+// );
+
+//New Router
 app.post(
   "/listings",
-  upload.array("listing[images]", 5),   // accept up to 5 images
+  upload.single("listing[image]"),   // 👈 one file only
   WrapAsync(async (req, res, next) => {
-    // ✅ Validate form data (excluding images, since they’re files)
+    // Joi validation
     let result = listingSchema.validate(req.body);
     if (result.error) {
       let msg = result.error.details.map((el) => el.message).join(",");
       throw new ExpressError(400, msg);
     }
 
-    // ✅ Create new listing
+    // Create new listing
     const newListing = new Listing(req.body.listing);
-    newListing.owner = req.user._id;
+    newListing.owner = req.user ? req.user._id : null;
 
-    // ✅ Save uploaded image paths into listing
-    if (req.files && req.files.length > 0) {
-      newListing.images = req.files.map((file) => `/uploads/${file.filename}`);
+    // Cloudinary gives HTTPS link + public ID
+    if (req.file) {
+      newListing.image = req.file.path;      // Cloudinary HTTPS URL
+      newListing.imageId = req.file.filename; // Cloudinary public ID
     }
 
     await newListing.save();
@@ -267,6 +305,9 @@ app.post(
     res.redirect("/allistinggg");
   })
 );
+
+
+
 
 
 
@@ -292,31 +333,72 @@ app.post("/listings/:id/reviews",isLoggedIn,WrapAsync(async(req,res,next)=>{
   // console.log(listing);
 }))
 
-app.get(("/listings/:id/edit"),isLoggedIn,WrapAsync(async(req,res)=>{
-  // if(!req.isAuthenticated()){
+// app.get(("/listings/:id/edit"),isLoggedIn,WrapAsync(async(req,res)=>{
+//   // if(!req.isAuthenticated()){
     
-  //   return res.redirect("/login");
-  // }
-  let {id}=req.params;
-  const listing= await Listing.findById(id);
+//   //   return res.redirect("/login");
+//   // }
+//   let {id}=req.params;
+//   const listing= await Listing.findById(id);
   
-  // req.flash("edit","Your Documents is now editted......") 
-  // req.flash("edit", "Listing updated successfully!");          
-  res.render("edit.ejs",{listing});
-}))
+//   // req.flash("edit","Your Documents is now editted......") 
+//   // req.flash("edit", "Listing updated successfully!");          
+//   res.render("edit.ejs",{listing});
+// }))
 
 
 
 
-app.put(("/listings/:id"),isLoggedIn,WrapAsync(async(req,res)=>{
-  let {id}=req.params;
-  let listing=await Listing.findById(id);
+// app.put(("/listings/:id"),isLoggedIn,WrapAsync(async(req,res)=>{
+//   let {id}=req.params;
+//   let listing=await Listing.findById(id);
   
   
-  const updatedListing=await Listing.findByIdAndUpdate(id, {...req.body.listing});  
-  req.flash("edit", "Listing updated successfully!"); 
-  res.redirect(`/listings/${id}`);
-}))
+//   const updatedListing=await Listing.findByIdAndUpdate(id, {...req.body.listing});  
+//   req.flash("edit", "Listing updated successfully!"); 
+//   res.redirect(`/listings/${id}`);
+// }))
+
+// Edit page
+// EDIT PAGE
+app.get(
+  "/listings/:id/edit",
+  isLoggedIn,
+  WrapAsync(async (req, res) => {
+    let { id } = req.params;
+    const listing = await Listing.findById(id);
+
+    if (!listing) {
+      req.flash("error", "Listing not found!");
+      return res.redirect("/listings");
+    }
+
+    res.render("edit.ejs", { listing });
+  })
+);
+
+// UPDATE LISTING (with Cloudinary upload)
+app.put(
+  "/listings/:id",
+  isLoggedIn,
+  upload.single("listing[image]"), // multer middleware
+  WrapAsync(async (req, res) => {
+    let { id } = req.params;
+    let updatedData = { ...req.body.listing };
+
+    // If new image uploaded → save Cloudinary URL
+    if (req.file) {
+      updatedData.image = req.file.path; // Cloudinary gives secure URL
+    }
+
+    await Listing.findByIdAndUpdate(id, updatedData);
+
+    req.flash("edit", "Listing updated successfully!");
+    res.redirect(`/listings/${id}`);
+  })
+);
+
+
 //post deletion
 app.delete("/listings/:id",isLoggedIn,WrapAsync(async(req,res)=>{
   // if(!req.isAuthenticated()){

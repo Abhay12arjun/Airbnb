@@ -20,7 +20,7 @@
           </div>
           <div class="card-body">
 
-            <form method="POST" action="/listings/<%= listing._id %>?_method=PUT"  novalidate class="needs-validation">
+            <form method="POST" action="/listings/<%= listing._id %>?_method=PUT"  enctype="multipart/form-data" novalidate class="needs-validation">
 
               <!-- Title -->
               <div class="mb-3">
@@ -41,15 +41,19 @@
 
                <!-- Images-->
                <div class="mb-3">
-                <label for="image" class="form-label">Image</label>
-                <input 
-                  type="string" 
-                  class="form-control" 
-                  id="image" 
-                  name="listing[image]" 
-                  value="<%= listing.image %>"
-                  placeholder="Enter the image" required
-                  >
+                <label for="image" class="form-label">Images</label>
+<input 
+  type="file" 
+  class="form-control" 
+  id="image" 
+  name="listing[image]" 
+  accept="image/*"
+>
+<% if (listing.image) { %>
+  <p>Current Image:</p>
+  <img src="<%=listing.image%>" alt="Listing Image" width="200" class="mt-2" />
+<% } %>
+
                        <div class="valid-feedback">
       Looks good!
     </div>

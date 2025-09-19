@@ -93,7 +93,7 @@
     <% for (let listing of allistings) { %>
       <div class="card h-100 shadow-sm">
         <img
-          src="<%= listing.images || 'https://via.placeholder.com/600x400?text=Listing' %>"
+          src="<%= listing.image || 'https://via.placeholder.com/600x400?text=Listing' %>"
           class="card-img-top"
           alt="<%= listing.title %>"
         >
