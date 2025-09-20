@@ -13,6 +13,10 @@ const listingSchema = new Schema({
   description:String,
   image:String,
   imageId: String,
+  
+  
+
+
   // image: {
   //   type:String,
   //   default:"https://wallpaperaccess.com/full/4722322.jpg",

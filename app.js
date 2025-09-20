@@ -23,6 +23,10 @@ import User from "./models/user.js"
 import bodyParser from "body-parser";
 import bcrypt from "bcryptjs"
 import isReviewAuthor from "./middleware/AuthorReview.js"
+// const mbxGeocoding = require("@mapbox/mapbox-sdk/services/geocoding");
+
+
+
 // import upload from "./middleware/upload.js";
 // Recreate __filename and __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -278,34 +282,19 @@ app.get("/listings/:id",WrapAsync(async(req,res)=>{
 // );
 
 //New Router
-app.post(
-  "/listings",
-  upload.single("listing[image]"),   // 👈 one file only
-  WrapAsync(async (req, res, next) => {
-    // Joi validation
-    let result = listingSchema.validate(req.body);
-    if (result.error) {
-      let msg = result.error.details.map((el) => el.message).join(",");
-      throw new ExpressError(400, msg);
+app.post( "/listings", upload.single("listing[image]"),  
+WrapAsync(async (req, res, next) => {
+   let result = listingSchema.validate(req.body);
+   if (result.error) { let msg = result.error.details.map((el) => el.message).joi(""); throw new ExpressError(400, msg); } // Create new listing
+  const newListing = new Listing(req.body.listing); newListing.owner = req.user ?req.user._id : null; // Cloudinary gives HTTPS link + public ID
+
+  if (req.file) { newListing.image = req.file.path; // Cloudinary 
+  // HTTPS URL
+   newListing.imageId = req.file.filename; // Cloudinary public ID
     }
-
-    // Create new listing
-    const newListing = new Listing(req.body.listing);
-    newListing.owner = req.user ? req.user._id : null;
-
-    // Cloudinary gives HTTPS link + public ID
-    if (req.file) {
-      newListing.image = req.file.path;      // Cloudinary HTTPS URL
-      newListing.imageId = req.file.filename; // Cloudinary public ID
-    }
-
-    await newListing.save();
-
-    req.flash("success", "New Listing Created 🚀");
-    res.redirect("/allistinggg");
-  })
-);
-
+    await newListing.save(); req.flash("success", "New Listing Created 🚀"); res.redirect("/allistinggg");
+   })
+   );
 
 
 
